@@ -1,0 +1,49 @@
+1. What are the advantages and disadvantages of each of the two scheduling policies? Also, give the advantages and disadvantages of the round-robin scheduling policy originally implemented in Xinu.
+
+Ans :
+
+|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Scheduler        | Advantages                                                                                                                          | Disadvantages                                                                                     |
+|------------------|-------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+|   EXPDISTSCHED   | 1. Uses an exponential distribution to decide which process runs next, ensuring probabilistic fairness across priorities.           | 1. The randomness at its core introduces slight variations between runs.                          |
+|                  | 2. Implementation remains compact, relying mainly on a single exponential draw and queue traversal logic.                           | 2. Because of non-determinism, it can be difficult to reproduce exact test results.               |
+|                  | 3. CPU usage follows the expected ratio of roughly 0.63 : 0.23 : 0.14, confirming that the scheduling logic behaves as intended.    | 3. The unpredictable nature of random values may momentarily favor specific processes.            |
+|                  | 4. Distinguishes itself through its simplicity—no epochs or extra variables—making it ideal for validating queue behavior.          | 4. Offers no adaptive mechanism; selection remains purely probabilistic regardless of workload.   |
+|                  | 5. Overall, it represents a clean trade-off between fairness and unpredictability, giving measurable yet slightly variable results. | 5. Over long runs, certain random sequences may lead to mild CPU underutilization.                |
+|------------------|-------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+|    LINUXSCHED    | 1. Defines scheduling through epochs and a dynamic “goodness” metric that reflects both priority and remaining quantum.             | 1. Adds complexity through multiple parameters like quantum and epoch tracking.                   |
+|                  | 2. The implementation recalculates goodness values each epoch, enabling smooth redistribution of CPU time.                          | 2. Newly created or awakened processes must wait until the next epoch to begin execution.         |
+|                  | 3. In execution, CPU time is allocated proportionally and predictably, completely preventing starvation.                            | 3. Periodic recomputation of epoch data introduces slight overhead.                               |
+|                  | 4. Stands out for its realism—mirroring Linux kernel behavior and providing stable scheduling patterns.                             | 4. Debugging epoch transitions can be challenging when several processes complete simultaneously. |
+|                  | 5. Overall, it achieves a fair balance between responsiveness and complexity, making it a robust model for dynamic scheduling.      |                                                                                                   |
+|------------------|-------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+|    ROUND-ROBIN   | 1. Defines a strict cyclic policy where each process receives an equal quantum in turn.                                             | 1. Ignores process priorities completely, often causing starvation in mixed workloads.            |
+|        XINU      | 2. Implemented with minimal logic—only ready-queue rotation—making it straightforward to maintain.                                  | 2. Provides limited fairness when processes differ significantly in runtime needs.                |
+|                  | 3. CPU allocation is perfectly uniform, offering predictable timing that simplifies testing and analysis.                           | 3. Performs inefficiently in systems combining CPU-bound and I/O-bound tasks.                     |
+|                  | 4. Distinguishes itself through simplicity; ideal for baseline comparisons with advanced schedulers.                                | 4. Lacks adaptability or self-tuning features.                                                    |
+|                  | 5. Overall, it remains reliable for light or educational workloads but scales poorly for complex, priority-driven systems.          |                                                                                                   |
+|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+
+2. Describe how each scheduling algorithm ensures that the NULL process only ever runs when there are no other eligible processes.
+
+Ans :
+
+|----------------------------------------------------------------------------------------------------------------------------------------------| 
+| Scheduler         | NULL Process Handling                                                                                                    |
+|----------------------------------------------------------------------------------------------------------------------------------------------|
+| EXPDISTSCHED      | 1. The NULL process only runs when no other ready process exists, acting as the CPU’s fallback.                          |
+|                   | 2. It is skipped automatically during random selection whenever there’s at least one active process in the queue.        |
+|                   | 3. It never affects randomness or fairness — it simply occupies the CPU until real processes return.                     |
+|                   | 4. Helps verify that queue handling logic and ready state checks are working as expected.                                |                    
+|-------------------|--------------------------------------------------------------------------------------------------------------------------|
+| LINUXSCHED        | 1. The NULL process runs when all processes have exhausted their goodness, marking the end of an epoch.                  |
+|                   | 2. It stays active briefly while the next epoch’s goodness values are recalculated.                                      |
+|                   | 3. Acts as a boundary between epochs, similar to idle time in Linux systems.                                             |
+|                   | 4. Immediately gives up CPU control once a process becomes ready again.                                                  |
+|                   | 5. Useful for confirming epoch transitions are detected correctly during tests.                                          |
+|-------------------|--------------------------------------------------------------------------------------------------------------------------|
+| ROUND-ROBIN       | 1. In the round-robin scheduler, the NULL process executes only when all other processes are blocked or done.            |
+| (XINU)            | 2. It ensures the CPU remains active between context switches, preventing true idle states.                              |
+|                   | 3. The moment a process becomes ready, it immediately replaces the NULL process.                                         |
+|                   | 4. Simple and predictable, serving as a lightweight backup when no runnable tasks remain.                                |
+|----------------------------------------------------------------------------------------------------------------------------------------------|                                                                                                                          |
